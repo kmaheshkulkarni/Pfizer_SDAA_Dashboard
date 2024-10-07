@@ -1,8 +1,10 @@
+# renv::restore()
+# renv::install()
+# renv::snapshot()
 # renv::activate()
-renv::load()
+# renv::load()
 
 library(shiny)
-library(shinyWidgets)
 library(bs4Dash)
 library(shinyFiles)
 library(stringr)

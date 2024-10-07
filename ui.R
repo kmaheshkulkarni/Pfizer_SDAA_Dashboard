@@ -1,6 +1,6 @@
 ui <- bs4DashPage(
   # Link the CSS file
-  # preloader = list(html = tagList(spin_flower(), "Loading ..."), color = "#000485"),
+  preloader = list(html = tagList(spin_flower(), "Loading ..."), color = "#000485"),
   
   dark = FALSE,
   help = NULL,
