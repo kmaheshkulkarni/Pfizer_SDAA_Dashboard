@@ -4,11 +4,11 @@ library(DT)  # Ensure DT is loaded for rendering data tables
 library(waiter)  # Make sure to include this for the Waiter functionality
 
 # UI Function
-Data_Load_UI <- function(id) {
+PREQUISITES_UI <- function(id) {
   ns <- NS(id)
   
   tabPanel(
-    "Load Data",
+    "",
     value = "Tab1",
     fluidRow(
       column(3, fileInput(ns("files"), "Upload SDAA Excel File", accept = ".xlsx"))
@@ -35,7 +35,7 @@ Data_Load_UI <- function(id) {
 
 
 # Server Function
-Data_Load_server <- function(id) {
+PREQUISITES_server <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- NS(id)  # Correctly create the namespace
     
@@ -87,8 +87,8 @@ Data_Load_server <- function(id) {
 }
 
 # Module to call server function
-data_load_module <- function(id) {
+PREQUISITES_module <- function(id) {
   moduleServer(id, function(input, output, session) {
-    Data_Load_server(id)
+    PREQUISITES_server(id)
   })
 }

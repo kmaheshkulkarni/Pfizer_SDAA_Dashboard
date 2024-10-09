@@ -1,5 +1,5 @@
 
-Data_Insights_UI <- function(id){
+SDAA_DASHBOARD_UI <- function(id){
   ns <- NS(id)
   
   tabPanel(
@@ -39,7 +39,7 @@ Data_Insights_UI <- function(id){
   
 }
 
-Data_Insights_server <- function(id, data) {
+SDAA_DASHBOARD_server <- function(id, data) {
   moduleServer(id, function(input, output, session) {
     
     ns <- session$ns
@@ -67,11 +67,11 @@ Data_Insights_server <- function(id, data) {
       Fdata <- data() 
       valueBox(
         elevation = 4,
-        value = n_distinct(Fdata$STUDYID),
+        value = unique(Fdata$STUDYID),
         subtitle = "Study ID Value",
         color = "primary",
-        icon = icon("cart-shopping"),
-        href = "#"
+        icon = icon("albums-outline"),
+        href = NULL
       )
     })
     
@@ -83,7 +83,7 @@ Data_Insights_server <- function(id, data) {
         value = mean(Fdata$PCLLOQ),
         subtitle = "AVG PCL Value",
         color = "primary",
-        icon = icon("gears")
+        icon = icon("analytics-outline")
       )
     })
     
@@ -94,14 +94,14 @@ Data_Insights_server <- function(id, data) {
         value = n_distinct(Fdata$SUBJID),
         subtitle = "Processing Rate",
         color = "primary",
-        icon = icon("gears")
+        icon = icon("albums-outline")
       )
     })
     
   })
 }
 
-Data_Insights_module <- function(id, data) {
-  Data_Insights_UI(id)
-    Data_Insights_server(id, data)
+SDAA_DASHBOARD_module <- function(id, data) {
+  SDAA_DASHBOARD_UI(id)
+  SDAA_DASHBOARD_server(id, data)
 }

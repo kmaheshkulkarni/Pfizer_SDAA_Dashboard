@@ -2,3 +2,6 @@
 ^renv\.lock$
 ^.*\.Rproj$
 ^\.Rproj\.user$
+^Pfizer_SDAA_Dashboard\.Rcheck$
+^Pfizer_SDAA_Dashboard.*\.tar\.gz$
+^Pfizer_SDAA_Dashboard.*\.tgz$

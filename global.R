@@ -1,7 +1,7 @@
 source("modules/packages.R")
 
-source("modules/Load_Data_Tab.R")
-source("modules/Data_Insights.R")
+source("modules/01_PREQUISITES.R")
+source("modules/02_SDAA_DASHBOARD.R")
 source("modules/Data_Insights2.R")
 source("modules/Data_Insights3.R")
 source("modules/Data_Insights4.R")

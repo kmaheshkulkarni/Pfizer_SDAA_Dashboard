@@ -47,3 +47,6 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+Pfizer_SDAA_Dashboard.Rcheck/
+Pfizer_SDAA_Dashboard*.tar.gz
+Pfizer_SDAA_Dashboard*.tgz
