@@ -6,102 +6,254 @@ SDAA_DASHBOARD_UI <- function(id){
     "Load Data",
     value = "Tab2",
 
-      fluidRow(
-    valueBoxOutput(ns("STUDYID")),  # Using ns() for modular ID scoping
-    valueBoxOutput(ns("AVG_PCL_Value")),
-    valueBoxOutput(ns("Total_SUBJECT_ID"))
-  ),
-  
+    fluidRow(
+      column(2, pickerInput(ns("study_id_select"), "Select Study ID", 
+                            choices = NULL, options = list(`live-search` = TRUE))),  # Dropdown for Study ID
+      
+      column(2, pickerInput(ns("subj_id_select"), "Select Subject ID", 
+                            choices = NULL, options = list(`live-search` = TRUE))),
+      
+      column(2, actionBttn(ns("update_plots"), label = "Update Visuals", style = "fill")) # Add update button
+      
+      ),
+    
+    
+    fluidRow(
+    valueBoxOutput(ns("TreatDesc")),  # Using ns() for modular ID scoping
+    
+    valueBoxOutput(ns("Biological_Matrix")),
+    
+    valueBoxOutput(ns("Category")),
+    
+    valueBoxOutput(ns("Bioanalytical_Method"))
+    
+    ),
+
+    
   fluidRow(
     box(
-      title = "Normal Distribution of PCL Values",
-      closable = FALSE, 
-      width = 12,
-      status = "warning", 
-      solidHeader = FALSE, 
+      title = "Total Records in Data",
+      closable = FALSE,
+      width = 5,
+      status = "warning",
+      solidHeader = FALSE,
       collapsible = TRUE,
-      plotlyOutput(ns("Normal_Dist_Plot"))
-    )
-  ),
-  
-  fluidRow(
+      echarts4rOutput(ns("rcount"))
+    ),
+    
     box(
-      title = "PCL Values Subject ID Wise",
-      closable = FALSE, 
-      width = 12,
-      status = "warning", 
-      solidHeader = FALSE, 
+      title = "PCL Values VISIT ID Wise",
+      closable = FALSE,
+      width = 7,
+      status = "warning",
+      solidHeader = FALSE,
       collapsible = TRUE,
-      plotlyOutput(ns("Subjectid_viz"))
+      plotlyOutput(ns("pcorres_plot"))
     )
   )
 )
   
 }
 
-SDAA_DASHBOARD_server <- function(id, data) {
+
+
+SDAA_DASHBOARD_server <- function(id, uploadedData) {
   moduleServer(id, function(input, output, session) {
     
     ns <- session$ns
     
-    output$Normal_Dist_Plot <- renderPlotly({
-      Fdata <- data()  # Fetch the reactive data
-      if (!is.null(Fdata)) {
-        normal_distribution(data = Fdata, parameter = Fdata$PCLLOQ, xname = "PCLLOQ Range")
-      }
+    # Update Study ID dropdown choices when data is available
+    observeEvent(uploadedData$THdata(), {
+      study_ids <- unique(uploadedData$THdata()$STUDYID)
+      updatePickerInput(session, "study_id_select", choices = study_ids)
     })
     
-    output$Subjectid_viz <- renderPlotly({
-      Fdata <- data()  # Fetch the reactive data
-      if (!is.null(Fdata)) {
-        plot_ly(
-          x = Fdata$SUBJID,
-          y = Fdata$PCLLOQ,
-          name = "PCL Values by Subject ID wise",
-          type = "bar"
-        )
-      }
+    
+    # Update Subject ID dropdown based on selected Study ID
+    observeEvent(input$study_id_select, {
+      req(input$study_id_select) # Require a Study ID to be selected
+      
+      filtered_data <- uploadedData$THdata() %>% 
+        filter(STUDYID == input$study_id_select)
+      
+      subj_ids <- unique(filtered_data$SUBJID)
+      updatePickerInput(session, "subj_id_select", choices = subj_ids)
+    })    
+    
+    filtered_data <- eventReactive(input$update_plots, { # Use eventReactive
+      
+      req(uploadedData$THdata(), 
+          input$study_id_select, 
+          input$subj_id_select)
+     
+       uploadedData$THdata() %>%
+        filter(STUDYID == input$study_id_select, SUBJID == input$subj_id_select)
     })
     
-    output$STUDYID <- renderValueBox({
-      Fdata <- data() 
+    
+    plot_data <- reactive({
+      req(filtered_data(), uploadedData$data1())
+      FLT <- filtered_data()
+      FLT$PCORRES <- round(as.numeric(FLT$PCORRES))
+      
+      # Convert ULOQ and LLOQ to numeric (removing units)
+      normal_values_numeric <- uploadedData$data1() %>%
+        mutate(ULOQ = as.numeric(gsub("[^0-9.]", "", ULOQ)),  # Extract numeric part
+               LLOQ = as.numeric(gsub("[^0-9.]", "", LLOQ)))
+      
+      
+      # Join and filter (Important: Adjusted join and filter logic)
+      joined_data <- FLT %>%
+        left_join(normal_values_numeric, by = c("STUDYID", "TREATXT", "VISIT")) # Join by relevant columns
+      
+      # Filter based on ULOQ and LLOQ – this is where you specify the exact filtering logic
+      filtered_joined_data <- joined_data %>%
+        filter(PCORRES >= LLOQ, PCORRES <= ULOQ) # Filter within ULOQ and LLOQ range
+      
+      return(filtered_joined_data)
+    })
+    
+    
+    
+    print("filtered_data")
+    print(filtered_data)
+    
+    # filtered_data <- reactive({
+    #   req(uploadedData$THdata())
+    #   req(input$study_id_select)
+    #   req(input$subj_id_select)
+    #   
+    #   uploadedData$THdata() %>%
+    #     filter(STUDYID %in% input$study_id_select, SUBJID %in% input$subj_id_select)
+    # })
+    print("plot_data")
+    print(plot_data)
+    
+    output$pcorres_plot <- renderPlotly({
+      req(plot_data())
+      
+      fig <- plot_ly(data = plot_data(), x = ~VISIT, y = ~PCORRES, type = 'scatter', mode = 'markers',
+                     color = ~SUBJID, hoverinfo = "text",
+                     text = ~paste("Subject:", SUBJID, "<br>Visit:", VISIT, "<br>PCORRES:", PCORRES)) %>%
+        layout(title = "PCORRES Values Over Visits",
+               xaxis = list(title = "Visit"),
+               yaxis = list(title = "PCORRES"))
+      
+      fig
+    })
+    
+    
+    output$TreatDesc <- renderValueBox({
+      req(filtered_data())
+      Fdata <- filtered_data()
       valueBox(
-        elevation = 4,
-        value = unique(Fdata$STUDYID),
-        subtitle = "Study ID Value",
+        elevation = 3,
+        value = unique(Fdata$TREATXT),
+        subtitle = "Treatment Description",
         color = "primary",
-        icon = icon("albums-outline"),
+        icon = icon("fa-clipboard"),
         href = NULL
       )
     })
     
     # Render the second value box dynamically
-    output$AVG_PCL_Value <- renderValueBox({
-      Fdata <- data() 
+    output$Category <- renderValueBox({
+      req(filtered_data())
+      Fdata <- filtered_data()
+      
       valueBox(
-        elevation = 4,
-        value = mean(Fdata$PCLLOQ),
-        subtitle = "AVG PCL Value",
+        elevation = 3,
+        value = unique(Fdata$PCCAT),
+        subtitle = "Category",
         color = "primary",
-        icon = icon("analytics-outline")
+        icon = icon("input-numeric")
       )
     })
     
-    output$Total_SUBJECT_ID <- renderValueBox({
-      Fdata <- data() 
+    output$Biological_Matrix <- renderValueBox({
+      req(filtered_data())
+      Fdata <- filtered_data()
+      
       valueBox(
-        elevation = 4,
-        value = n_distinct(Fdata$SUBJID),
-        subtitle = "Processing Rate",
+        elevation = 3,
+        value = unique(Fdata$PCSPEC),
+        subtitle = "Biological Matrix",
         color = "primary",
-        icon = icon("albums-outline")
+        icon = icon("memo")
       )
     })
+    
+    
+    output$Bioanalytical_Method <- renderValueBox({
+      req(filtered_data())
+      Fdata <- filtered_data()
+      
+      valueBox(
+        elevation = 3,
+        value = unique(Fdata$PCMETHOD),
+        subtitle = "Bioanalytical Method",
+        color = "primary",
+        icon = icon("memo")
+      )
+    })
+    
+    output$rcount <- renderEcharts4r({
+      req(filtered_data())
+      Fdata <- filtered_data()
+      nrfdata <- nrow(Fdata)
+      
+      e_charts() %>%
+        e_gauge(as.numeric(nrfdata), "Records")  # Correct: nrow(Fdata)
+        # e_title("Total Records in Data")
+    })
+    
+    output$Uniq_SubjID <- renderEcharts4r({
+      req(uploadedData$THdata())
+      Fdata <- uploadedData$THdata()
+      
+      print("Fdata")
+      print(Fdata)
+      
+      distinct_count <- Fdata %>%
+        summarise(USUBJID = n_distinct(SUBJID))
+      
+      e_charts() %>%
+        e_gauge(as.numeric(distinct_count$USUBJID), "Records") %>%  # Correct: nrow(Fdata)
+        e_title("Total Subject ID in Data")
+      
+      
+    })
+    
+    # output$Normal_Dist_Plot <- renderPlotly({
+    #   
+    #   req(filtered_data())
+    #   
+    #   Fdata <- filtered_data()  # Fetch the reactive data
+    #   
+    #   if (!is.null(Fdata)) {
+    #     normal_distribution(data = Fdata, parameter = Fdata$PCLLOQ, xname = "PCLLOQ Range")
+    #   }
+    # })
+    # 
+    # output$Subjectid_viz <- renderPlotly({
+    #   req(filtered_data())
+    #   
+    #   Fdata <- filtered_data() # Fetch the reactive data
+    #   if (!is.null(Fdata)) {
+    #     plot_ly(
+    #       x = Fdata$SUBJID,
+    #       y = Fdata$PCLLOQ,
+    #       name = "PCL Values by Subject ID wise",
+    #       type = "bar"
+    #     )
+    #   }
+    # })
+    
     
   })
 }
 
-SDAA_DASHBOARD_module <- function(id, data) {
+SDAA_DASHBOARD_module <- function(id, uploadedData) {
   SDAA_DASHBOARD_UI(id)
-  SDAA_DASHBOARD_server(id, data)
+  SDAA_DASHBOARD_server(id, uploadedData)
 }

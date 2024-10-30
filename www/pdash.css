@@ -100,10 +100,11 @@ a:hover {
     color: #222222;
     border-color: #FFFFFF;
 }
+
 .bttn-fill.bttn-default {
-    margin-top: 25px;
-    background: #FFFFFF;
-    color: #000485;
+    margin-top: 30px;;
+    background: #000485;
+    color: #0095FF;
 }
 
 .navbar-nav>.user-menu .user-image {
